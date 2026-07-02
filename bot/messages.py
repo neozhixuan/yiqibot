@@ -1,21 +1,36 @@
+from __future__ import annotations
+
 from html import escape
 
 from .deployment import DeploymentInfo
 from .models import WeddingEvent
 
 
-def format_reminder(event: WeddingEvent, reminder_minutes: int) -> str:
+def _format_next_event_preview(next_event: WeddingEvent | None) -> str:
+    if next_event is None:
+        return "🫶 <b>Next up:</b> This is the last scheduled reminder."
+
+    next_start_text = next_event.start.strftime("%d %b %Y, %H:%M")
+    return f"🫶 <b>Next up:</b> {escape(next_event.title)} at {next_start_text} SGT"
+
+
+def format_reminder(
+    event: WeddingEvent,
+    reminder_minutes: int,
+    next_event: WeddingEvent | None = None,
+) -> str:
     start_text = event.start.strftime("%d %b %Y, %H:%M")
     return (
         f"💍 <b>Wedding Reminder: {escape(event.title)}</b>\n\n"
         f"⏰ <b>Starts in {reminder_minutes} minutes:</b> {start_text} SGT\n\n"
         f"{escape(event.message)}\n\n"
+        f"{_format_next_event_preview(next_event)}\n\n"
         "Wishing everyone a smooth, beautiful, and joyful moment ahead."
     )
 
 
 def format_deployment_notice(info: DeploymentInfo) -> str:
-    lines = ["🚂 <b>Railway deployment notice</b>", "", "A new deployment is now live for this bot."]
+    lines = ["✨ <b>Zaiyiqi bot has updated!</b>", "", "A fresh Railway deployment is now live and ready to help."]
 
     if info.project_name or info.service_name:
         project_label = escape(info.project_name or "Unknown project")

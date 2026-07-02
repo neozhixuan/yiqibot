@@ -1,5 +1,9 @@
 # Wedding Telegram Reminder Bot
 
+> [!TIP]
+> This repository was AI generated.
+
+
 Small Telegram reminder bot for Railway.
 
 ## Structure

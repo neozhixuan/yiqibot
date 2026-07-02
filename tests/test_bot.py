@@ -60,20 +60,36 @@ class BotTests(unittest.IsolatedAsyncioTestCase):
 
     def test_get_events_returns_wedding_schedule(self) -> None:
         events = get_events(SGT)
-        self.assertEqual(len(events), 26)
-        self.assertEqual(events[0].title, "Parents Veiling & Shu Tou")
+        self.assertEqual(len(events), 27)
+        self.assertEqual(events[0].title, "Test Reminder Check")
+        self.assertEqual(events[0].start, datetime(2026, 7, 3, 8, 0, tzinfo=SGT))
         self.assertEqual(events[0].start.tzinfo, SGT)
 
-    def test_format_reminder_includes_minutes_and_escapes_html(self) -> None:
+    def test_format_reminder_includes_minutes_preview_and_escapes_html(self) -> None:
         event = WeddingEvent(
             title="Photos <Now>",
             start=datetime(2026, 7, 4, 16, 30, tzinfo=SGT),
             message="Bring <bouquet> & smile.",
         )
-        message = format_reminder(event, 10)
+        next_event = WeddingEvent(
+            title="Tea <Ceremony>",
+            start=datetime(2026, 7, 4, 17, 10, tzinfo=SGT),
+            message="Next",
+        )
+        message = format_reminder(event, 10, next_event)
         self.assertIn("Wedding Reminder: Photos &lt;Now&gt;", message)
         self.assertIn("Starts in 10 minutes:", message)
         self.assertIn("Bring &lt;bouquet&gt; &amp; smile.", message)
+        self.assertIn("Next up:</b> Tea &lt;Ceremony&gt; at 04 Jul 2026, 17:10 SGT", message)
+
+    def test_format_reminder_marks_last_scheduled_event(self) -> None:
+        event = WeddingEvent(
+            title="Final Event",
+            start=datetime(2026, 7, 4, 22, 30, tzinfo=SGT),
+            message="Wrap up.",
+        )
+        message = format_reminder(event, 10)
+        self.assertIn("This is the last scheduled reminder.", message)
 
     def test_get_deployment_info_returns_none_without_railway_markers(self) -> None:
         settings = BotSettings(
@@ -92,6 +108,7 @@ class BotTests(unittest.IsolatedAsyncioTestCase):
             git_commit_sha="abcdef1234567890",
         )
         message = format_deployment_notice(info)
+        self.assertIn("Zaiyiqi bot has updated!", message)
         self.assertIn("dep-123", message)
         self.assertIn("sha256:test", message)
         self.assertIn("abcdef1", message)
@@ -147,7 +164,7 @@ class BotTests(unittest.IsolatedAsyncioTestCase):
 
         deployment_sender.assert_not_awaited()
         sleep.assert_awaited_once_with(600.0)
-        reminder_sender.assert_awaited_once_with(bot, "-10012345", future_event, 10)
+        reminder_sender.assert_awaited_once_with(bot, "-10012345", future_event, 10, None)
 
     async def test_run_scheduler_sends_deployment_notice_on_startup(self) -> None:
         settings = BotSettings(
@@ -173,6 +190,45 @@ class BotTests(unittest.IsolatedAsyncioTestCase):
         deployment_sender.assert_awaited_once()
         reminder_sender.assert_not_awaited()
         sleep.assert_not_awaited()
+
+    async def test_run_scheduler_passes_next_event_preview(self) -> None:
+        settings = BotSettings(
+            bot_token="token",
+            raw_channel_id="12345",
+            reminder_minutes=10,
+        )
+        now = datetime(2026, 7, 3, 7, 40, tzinfo=SGT)
+        first_event = WeddingEvent(
+            title="First Event",
+            start=datetime(2026, 7, 3, 8, 0, tzinfo=SGT),
+            message="First",
+        )
+        second_event = WeddingEvent(
+            title="Second Event",
+            start=datetime(2026, 7, 3, 9, 0, tzinfo=SGT),
+            message="Second",
+        )
+        bot = DummyBot()
+        sleep = AsyncMock()
+        reminder_sender = AsyncMock()
+        deployment_sender = AsyncMock()
+        now_values = iter([now, now, now])
+
+        await run_scheduler(
+            settings,
+            [second_event, first_event],
+            bot_factory=lambda token: bot,
+            sleep=sleep,
+            now_provider=lambda: next(now_values),
+            reminder_sender=reminder_sender,
+            deployment_sender=deployment_sender,
+        )
+
+        self.assertEqual(reminder_sender.await_count, 2)
+        first_call = reminder_sender.await_args_list[0].args
+        second_call = reminder_sender.await_args_list[1].args
+        self.assertEqual(first_call, (bot, "-10012345", first_event, 10, second_event))
+        self.assertEqual(second_call, (bot, "-10012345", second_event, 10, None))
 
 
 if __name__ == "__main__":

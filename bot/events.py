@@ -25,6 +25,16 @@ def get_events(timezone: ZoneInfo) -> list[WeddingEvent]:
     return [
         build_event(
             timezone,
+            "Test Reminder Check",
+            2026,
+            7,
+            3,
+            8,
+            0,
+            "Test event to verify that the reminder bot is working and sending messages correctly.",
+        ),
+        build_event(
+            timezone,
             "Parents Veiling & Shu Tou",
             2026,
             7,

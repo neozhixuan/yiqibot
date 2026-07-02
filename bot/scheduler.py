@@ -4,6 +4,7 @@ import asyncio
 import logging
 from collections.abc import Awaitable, Callable, Sequence
 from datetime import datetime
+from typing import Optional
 
 from telegram import Bot
 
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 NowProvider = Callable[[], datetime]
 SleepFn = Callable[[float], Awaitable[None]]
-ReminderSender = Callable[[Bot, str, WeddingEvent, int], Awaitable[None]]
+ReminderSender = Callable[[Bot, str, WeddingEvent, int, Optional[WeddingEvent]], Awaitable[None]]
 DeploymentSender = Callable[[Bot, str, DeploymentInfo], Awaitable[None]]
 BotFactory = Callable[[str], Bot]
 
@@ -56,7 +57,8 @@ async def run_scheduler(
         if deployment_info is not None:
             await deployment_sender(bot, settings.channel_id, deployment_info)
 
-        for event in sorted_events:
+        for event_index, event in enumerate(sorted_events):
+            next_event = sorted_events[event_index + 1] if event_index + 1 < len(sorted_events) else None
             now = get_current_time(settings, now_provider)
             reminder_time = event.reminder_time(settings.reminder_offset)
 
@@ -77,6 +79,6 @@ async def run_scheduler(
             )
 
             await sleep(wait_seconds)
-            await reminder_sender(bot, settings.channel_id, event, settings.reminder_minutes)
+            await reminder_sender(bot, settings.channel_id, event, settings.reminder_minutes, next_event)
 
     logger.info("All wedding reminders have been processed. Bot exiting.")
