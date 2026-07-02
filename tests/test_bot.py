@@ -39,6 +39,10 @@ class BotTests(unittest.IsolatedAsyncioTestCase):
         settings = get_settings({"BOT_TOKEN": "token", "CHANNEL_ID": "-10012345"})
         self.assertEqual(settings.channel_id, "-10012345")
 
+    def test_get_settings_keeps_channel_username(self) -> None:
+        settings = get_settings({"BOT_TOKEN": "token", "CHANNEL_ID": "@zaiyiqibot_channel"})
+        self.assertEqual(settings.channel_id, "@zaiyiqibot_channel")
+
     def test_get_settings_requires_bot_token(self) -> None:
         with self.assertRaises(ValueError):
             get_settings({"RAW_CHANNEL_ID": "12345"})

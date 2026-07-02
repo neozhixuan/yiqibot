@@ -28,7 +28,7 @@ class BotSettings:
 
     @property
     def channel_id(self) -> str:
-        if self.raw_channel_id.startswith("-100"):
+        if self.raw_channel_id.startswith(("@", "-")):
             return self.raw_channel_id
         return f"-100{self.raw_channel_id}"
 

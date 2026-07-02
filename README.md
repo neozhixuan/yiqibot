@@ -21,6 +21,7 @@ RAW_CHANNEL_ID=562953664827933
 ```
 
 You can use `CHANNEL_ID=-100...` instead of `RAW_CHANNEL_ID` if you prefer the full Telegram chat id.
+You can also use `CHANNEL_ID=@your_channel_username` for a public channel username.
 
 Optional:
 
